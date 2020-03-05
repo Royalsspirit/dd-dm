@@ -30,22 +30,9 @@ func parseLine(b []byte) {
 	//127.0.0.1 - james [09/May/2018:16:00:39 +0000] "GET /report HTTP/1.0" 200 123
 	re := regexp.MustCompile(`/([a-z]+)`)
 	result := re.FindAllString(string(b), -1)
-	for i := 0; i < len(result); i++ {
-		statistics[result[i]]++
-	}
+
 	queue = append(queue, result...)
 
-	barchartData = nil
-	bcLabels = nil
-	sum := 0
-	for _, v := range statistics {
-		sum += v
-	}
-	for k, v := range statistics {
-		pourcent := (float64(v) / float64(sum)) * 100
-		barchartData = append(barchartData, math.Ceil(pourcent*100)/100)
-		bcLabels = append(bcLabels, k)
-	}
 }
 
 func getLine(initialState os.FileInfo) {
@@ -121,12 +108,36 @@ func terminalUI() {
 	bc.BarWidth = 5
 	bc.BarColors[0] = ui.ColorBlue
 
+	barchartData = nil
+	bcLabels = nil
+	sum := 0
+
 	draw := func(count int, initalStat os.FileInfo) {
 		getLine(initalStat)
 		if len(queue) > 0 {
-			listData = append(listData, queue[0])
+			statistics[queue[0]]++
+			sum++
+			match := false
+			pourcent := (float64(statistics[queue[0]]) / float64(sum)) * 100
+			for k, v := range bcLabels {
+				if v == queue[0] {
+					barchartData[k] = math.Ceil(pourcent*100) / 100
+					match = true
+				} else {
+					pourcent := (float64(statistics[v]) / float64(sum)) * 100
+					barchartData[k] = math.Ceil(pourcent*100) / 100
+				}
+			}
+			if !match {
+				bcLabels = append(bcLabels, queue[0])
+				barchartData = append(barchartData, math.Ceil(pourcent*100)/100)
+			}
+
 			queue = queue[1:]
+			listData = append(listData, queue[0])
+
 		}
+
 		l.Rows = listData[len(listData)-5:]
 		bc.Data = barchartData
 		bc.Labels = bcLabels
