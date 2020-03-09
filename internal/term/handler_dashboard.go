@@ -27,19 +27,22 @@ type Term struct {
 	bcLabels      []string
 	statistics    map[string]int
 	sum           int
-	logfile		  string
+	logfile       string
+	sinData       []float64
 }
 
 // Conf blablba
 type Conf struct {
 	Logfile string
 }
+
 // NewTerm blablab
 func NewTerm(conf *Conf) *Term {
 	return &Term{
 		logfile: conf.Logfile,
 	}
 }
+
 // Run run
 func (t *Term) Run() {
 	if err := ui.Init(); err != nil {
@@ -83,14 +86,24 @@ func (t *Term) Run() {
 	l := widgets.NewList()
 	l.Title = "List"
 	l.Rows = listData
-	l.SetRect(0, 25, 50, 6)
+	l.SetRect(0, 20, 50, 5)
 	l.TextStyle.Fg = ui.ColorYellow
 
 	bc := widgets.NewBarChart()
 	bc.Title = "Bar Chart"
-	bc.SetRect(50, 0, 80, 25)
+	bc.SetRect(50, 0, 80, 20)
 	bc.BarWidth = 5
 	bc.BarColors[0] = ui.ColorBlue
+
+	t.sinData = make([]float64, 73)
+
+	lc2 := widgets.NewPlot()
+	lc2.Title = "braille-mode Line Chart"
+	lc2.Data = make([][]float64, 1)
+	lc2.Data[0] = t.sinData
+	lc2.SetRect(0, 20, 80, 30)
+	lc2.AxesColor = ui.ColorWhite
+	lc2.LineColors[0] = ui.ColorYellow
 
 	barchartData = nil
 	bcLabels = nil
@@ -123,12 +136,17 @@ func (t *Term) Run() {
 			}
 
 		}
+		lc2.Data[0] = t.sinData
+		if len(t.sinData) > 1 {
+			t.sinData = t.sinData[1:]
+			t.sinData = append(t.sinData, 0)
+		}
 
-		l.Rows = listData[len(listData)-5:]
+		l.Rows = listData[len(listData)-2:]
 		bc.Data = t.barchartData
 		bc.Labels = t.bcLabels
 
-		ui.Render(p, l, bc)
+		ui.Render(p, l, bc, lc2)
 	}
 
 	tickerCount := 1
