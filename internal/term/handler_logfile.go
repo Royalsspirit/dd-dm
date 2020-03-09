@@ -33,6 +33,7 @@ func (t *Term) parseLine(b []byte) {
 	re := regexp.MustCompile(`/([a-z]+)`)
 	result := re.FindAllString(string(b), -1)
 
+	t.sinData = append(t.sinData, float64(len(result)))
 	t.queue = append(t.queue, result...)
 
 }
