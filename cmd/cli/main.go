@@ -1,8 +1,8 @@
 package main
 
 import (
-	"fmt"
 	"flag"
+	"fmt"
 	"github.com/Royalsspirit/dd-dm/internal/term"
 )
 
@@ -161,10 +161,10 @@ func terminalUI() {
 }
 */
 func main() {
-	file := flag.String("logfile","./localfile.log", "a path of log file wanted to monitoring")
-	threshold := flag.Int("threshold",10,"a threshold request per second")
+	file := flag.String("logfile", "./localfile.log", "a path of log file wanted to monitoring")
+	threshold := flag.Int("threshold", 10, "a threshold request per second")
 	flag.Parse()
-	fmt.Println("file",file,"threshold",threshold)
+	fmt.Println("file", file, "threshold", threshold)
 	t := term.NewTerm(&term.Conf{
 		Logfile: "./localfile.log",
 	})
