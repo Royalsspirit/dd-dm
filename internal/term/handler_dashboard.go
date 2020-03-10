@@ -4,6 +4,7 @@ import (
 	"log"
 	"math"
 	"os"
+	"strconv"
 	"time"
 
 	ui "github.com/gizak/termui/v3"
@@ -29,17 +30,22 @@ type Term struct {
 	sum           int
 	logfile       string
 	sinData       []float64
+	threshold     int
+	start         time.Time
 }
 
 // Conf blablba
 type Conf struct {
-	Logfile string
+	Logfile   string
+	Threshold int
 }
 
 // NewTerm blablab
 func NewTerm(conf *Conf) *Term {
 	return &Term{
-		logfile: conf.Logfile,
+		logfile:   conf.Logfile,
+		threshold: conf.Threshold,
+		start:     time.Now(),
 	}
 }
 
@@ -59,8 +65,8 @@ func (t *Term) Run() {
 
 	p := widgets.NewParagraph()
 	p.Title = "Text Box"
-	p.Text = "PRESS q TO QUIT DEMO"
-	p.SetRect(0, 0, 50, 5)
+	//p.Text = "PRESS q TO QUIT DEMO"
+	p.SetRect(0, 0, 80, 5)
 	p.TextStyle.Fg = ui.ColorWhite
 	p.BorderStyle.Fg = ui.ColorCyan
 
@@ -91,7 +97,7 @@ func (t *Term) Run() {
 
 	bc := widgets.NewBarChart()
 	bc.Title = "Bar Chart"
-	bc.SetRect(50, 0, 80, 20)
+	bc.SetRect(50, 5, 80, 20)
 	bc.BarWidth = 5
 	bc.BarColors[0] = ui.ColorBlue
 
@@ -108,12 +114,16 @@ func (t *Term) Run() {
 	barchartData = nil
 	bcLabels = nil
 	t.sum = 0
-
+	max := 0
 	draw := func(count int, initalStat os.FileInfo) {
 		t.Parse(initalStat)
+		if len(t.queue) > max {
+			max = len(t.queue)
+		}
 		if len(t.queue) > 0 {
 			t.statistics[t.queue[0]]++
 			t.sum++
+			t.sinData = append(t.sinData, float64(t.sum))
 			match := false
 			pourcent := (float64(t.statistics[t.queue[0]]) / float64(t.sum)) * 100
 			for k, v := range t.bcLabels {
@@ -130,23 +140,33 @@ func (t *Term) Run() {
 				t.barchartData = append(t.barchartData, math.Ceil(pourcent*100)/100)
 			}
 
-			t.queue = t.queue[1:]
 			if len(t.queue) != 0 {
-				listData = append(listData, t.queue[0])
+				l.Rows = append(l.Rows, t.queue[0])
+				l.Rows = l.Rows[1:]
 			}
+			t.queue = t.queue[1:]
 
 		}
+		current := time.Now()
+		if current.Sub(t.start).Seconds() >= 120 && max > t.threshold {
+			p.Text = "High traffic generated an alert - hits = " + strconv.Itoa(max) + ", triggered at " + current.Format(time.UnixDate)
+			t.start = time.Now()
+			max = 0
+		}
+
 		lc2.Data[0] = t.sinData
-		if len(t.sinData) > 1 {
+		if len(t.sinData) > 72 {
 			t.sinData = t.sinData[1:]
-			t.sinData = append(t.sinData, 0)
+		} else {
+			t.sinData = append(t.sinData, float64(t.sum))
 		}
 
-		l.Rows = listData[len(listData)-2:]
+		//l.Rows = listData[len(listData)%5:]
 		bc.Data = t.barchartData
 		bc.Labels = t.bcLabels
 
 		ui.Render(p, l, bc, lc2)
+
 	}
 
 	tickerCount := 1
