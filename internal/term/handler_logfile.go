@@ -17,7 +17,7 @@ func (t *Term) Parse(initialState os.FileInfo) {
 	}
 	initialState, _ = os.Stat(t.logfile)
 
-	buf := make([]byte, t.previousState.Size()+(t.previousState.Size()-initialState.Size()))
+	buf := make([]byte, t.previousState.Size()+(t.previousState.Size()-initialState.Size()), t.previousState.Size()+(t.previousState.Size()-initialState.Size()))
 
 	if t.previousState.Size() != initialState.Size() && t.previousState.ModTime() != initialState.ModTime() {
 		start := t.previousState.Size()
@@ -33,7 +33,7 @@ func (t *Term) parseLine(b []byte) {
 	re := regexp.MustCompile(`/([a-z]+)`)
 	result := re.FindAllString(string(b), -1)
 
-	t.sinData = append(t.sinData, float64(len(result)))
+	//t.sinData = append(t.sinData, float64(len(result)))
 	t.queue = append(t.queue, result...)
 
 }
