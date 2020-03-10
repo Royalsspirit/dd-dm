@@ -166,7 +166,8 @@ func main() {
 	flag.Parse()
 	fmt.Println("file", file, "threshold", threshold)
 	t := term.NewTerm(&term.Conf{
-		Logfile: "./localfile.log",
+		Logfile:   "./localfile.log",
+		Threshold: 10,
 	})
 	t.Run()
 }
