@@ -23,7 +23,7 @@ Optional:
 First, make sure your gitlab profil have a ssh key to allow `clone`
 
 ```
-$ git clone https://gist.github.com/PurpleBooth/109311bb0361f32d87a2
+$ git clone git@github.com:Royalsspirit/dd-dm.git
 ```
 
 ### Usage
@@ -41,6 +41,19 @@ You can also override these values:
 `$ make up threshold=20 logfile=/tmp/access.log`
 
 #### Binary
+
+You can find some help by typing:
+
+`$ make help`
+
+It should display:
+```
+Usage:
+  -logfile string
+    	a path of log file wanted to monitoring (default "./localfile.log")
+  -threshold string
+    	a threshold request per second (default "10")
+```
 
 If you don't want to use **Makefile**, you can also build binary as usually then run it:
 ```
