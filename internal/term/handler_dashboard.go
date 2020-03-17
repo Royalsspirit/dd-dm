@@ -119,14 +119,16 @@ func drawBarchart(t *Term) {
 	}
 }
 
-func drawAlert(t *Term, d *dashboard, max int) {
+func drawAlert(t *Term, d *dashboard, max *int) {
 	current := time.Now()
 	// constraint:
 	// Whenever total traffic for the past 2 minutes exceeds a certain number on average
-	if current.Sub(t.start).Seconds() >= 120 && max > t.threshold {
-		d.pa.Text = "High traffic generated an alert - hits = " + strconv.Itoa(max) + ", triggered at " + current.Format(time.UnixDate)
-		t.start = time.Now()
-		max = 0
+	if current.Sub(t.start).Seconds() >= 120 {
+		if *max > t.threshold {
+			d.pa.Text = "High traffic generated an alert - hits = " + strconv.Itoa(*max) + ", triggered at " + current.Format(time.UnixDate)
+			t.start = time.Now()
+		}
+		*max = 0
 	}
 }
 
@@ -147,12 +149,12 @@ func drawLine(d *dashboard, t *Term) {
 }
 
 // every 10 seconds draw the dashboard
-func drawDashboard(initalStat os.FileInfo, t *Term, d *dashboard, max int) {
+func drawDashboard(initalStat os.FileInfo, t *Term, d *dashboard, max *int) {
 	t.Parse(initalStat)
 	// looking for the max len of queue
 	// if max is upper than threshold, trigger an alert
-	if len(t.queue) > max {
-		max = len(t.queue)
+	if len(t.queue) > *max {
+		*max = len(t.queue)
 	}
 
 	if len(t.queue) > 0 {
@@ -202,12 +204,12 @@ func (t *Term) Run() {
 			dashboard.pa.TextStyle.Fg = ui.ColorWhite
 		}
 	}
-
+	t.start = time.Now()
 	t.sum = 0
 	max := 0
 	tickerCount := 1
 	// init dashboard
-	drawDashboard(initalStat, t, dashboard, max)
+	drawDashboard(initalStat, t, dashboard, &max)
 	tickerCount++
 	uiEvents := ui.PollEvents()
 
@@ -221,7 +223,7 @@ func (t *Term) Run() {
 			}
 		case <-ticker:
 			updateParagraph(tickerCount)
-			drawDashboard(initalStat, t, dashboard, max)
+			drawDashboard(initalStat, t, dashboard, &max)
 			tickerCount++
 		}
 	}
