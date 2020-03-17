@@ -17,7 +17,8 @@ func TestAlert(t *testing.T) {
 	d := dashboard{
 		pa: widgets.NewParagraph(),
 	}
-	drawAlert(&te, &d, 11)
+	max := 11
+	drawAlert(&te, &d, &max)
 	assert.Contains(t, d.pa.Text, "alert", "should contain alert")
 }
 
