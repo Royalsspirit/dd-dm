@@ -1,6 +1,10 @@
 # Log dasboard
 
-Monitoring server log
+Allow to monitor input http request.
+Display several stats about the most section hit, number request per second and a raw list of section found. 
+
+![alt text](./assets/dashboard_screenshot.png "Datadog monitoring tool")
+
 
 ## Getting Started
 
@@ -14,46 +18,46 @@ Before starting make sure you have below packages installed:
 Optional:
 - Docker version 18.09.7
 
-#### Linux
-
-TODO
-
-#### Windows
-
-TODO
-
-#### Mac
-
-TODO
-
 ### Installing
 
 First, make sure your gitlab profil have a ssh key to allow `clone`
 
 ```
+$ git clone https://gist.github.com/PurpleBooth/109311bb0361f32d87a2
 ```
 
-You will find below a step by step series of examples that tell you how to get a development env running.
+### Usage
+
+#### Makefile
+
+You can run the project thanks to Makefile and docker by tyiping:
+
+`$ make up`
+
+It will take a locafile.log by default and a threshold of 10.
+
+You can also override these values:
+
+`$ make up threshold=20 logfile=/tmp/access.log`
+
+#### Binary
+
+If you don't want to use **Makefile**, you can also build binary as usually then run it:
+```
+$ go build -o ./bin/dd-monitoring ./cmd/cli && ./bin/dd-monitoring -threshold 20 -logfile /tmp/access.log
+```
 
 ## Running the tests
 
-TODO
-
-## Deployment
+`$ make test`
 
 ## Built With
 
-- [CompileDaemon](https://github.com/githubnemo/CompileDaemon) - Watches your .go files in a directory and invokes go build if a file changed. Nothing more.
-- [Testify](https://github.com/stretchr/testify) - A toolkit with common assertions and mocks that plays nicely with the standard library
+- [termUi](https://github.com/gizak/termui) - Golang terminal dashboard
+- [standard layoug](https://github.com/golang-standards/project-layout) - Standard Go Project Layout
+- [daemon-golang](https://github.com/takama/daemon) - A daemon package for use with Go (golang) services with no dependencies
 
-## Contributing
-
-TODO
 
 ## Versioning
 
 We use [SemVer](http://semver.org/) for versioning. For the versions available, see the [tags on this repository](https://github.com/your/project/tags).
-
-## Acknowledgments
-
-TODO
