@@ -203,6 +203,7 @@ func (t *Term) Run() {
 		} else {
 			dashboard.pa.TextStyle.Fg = ui.ColorWhite
 		}
+		ui.Render(dashboard.pa)
 	}
 	t.start = time.Now()
 	t.sum = 0
@@ -214,6 +215,8 @@ func (t *Term) Run() {
 	uiEvents := ui.PollEvents()
 
 	ticker := time.NewTicker(time.Second * 10).C
+	tickerParagraphe := time.NewTicker(time.Second).C
+
 	for {
 		select {
 		case e := <-uiEvents:
@@ -222,8 +225,9 @@ func (t *Term) Run() {
 				return
 			}
 		case <-ticker:
-			updateParagraph(tickerCount)
 			drawDashboard(initalStat, t, dashboard, &max)
+		case <-tickerParagraphe:
+			updateParagraph(tickerCount)
 			tickerCount++
 		}
 	}
