@@ -150,7 +150,7 @@ func drawLine(d *dashboard, t *Term) {
 
 // every 10 seconds draw the dashboard
 func drawDashboard(initalStat os.FileInfo, t *Term, d *dashboard, max *int) {
-	t.Parse(initalStat)
+	//	t.Parse(initalStat)
 	// looking for the max len of queue
 	// if max is upper than threshold, trigger an alert
 	if len(t.queue) > *max {
@@ -188,7 +188,7 @@ func (t *Term) Run() {
 	}
 	defer ui.Close()
 
-	initalStat, err := os.Stat("localfile.log")
+	initalStat, err := os.Stat(t.logfile)
 	if err != nil {
 		panic(err)
 	}
@@ -228,6 +228,7 @@ func (t *Term) Run() {
 			drawDashboard(initalStat, t, dashboard, &max)
 		case <-tickerParagraphe:
 			updateParagraph(tickerCount)
+			t.Parse(initalStat)
 			tickerCount++
 		}
 	}
