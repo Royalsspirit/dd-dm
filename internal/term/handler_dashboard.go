@@ -214,8 +214,8 @@ func (t *Term) Run() {
 	tickerCount++
 	uiEvents := ui.PollEvents()
 
-	ticker := time.NewTicker(time.Second * 10).C
-	tickerParagraphe := time.NewTicker(time.Second).C
+	tickerUI := time.NewTicker(time.Second * 10).C
+	tickerParser := time.NewTicker(time.Second).C
 
 	for {
 		select {
@@ -224,9 +224,9 @@ func (t *Term) Run() {
 			case "q", "<C-c>":
 				return
 			}
-		case <-ticker:
+		case <-tickerUI:
 			drawDashboard(initalStat, t, dashboard, &max)
-		case <-tickerParagraphe:
+		case <-tickerParser:
 			updateParagraph(tickerCount)
 			t.Parse(initalStat)
 			tickerCount++
