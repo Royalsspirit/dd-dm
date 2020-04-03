@@ -149,7 +149,7 @@ func drawLine(d *dashboard, t *Term) {
 }
 
 // every 10 seconds draw the dashboard
-func drawDashboard(initalStat os.FileInfo, t *Term, d *dashboard, max *int) {
+func drawDashboard(t *Term, d *dashboard, max *int) {
 	//	t.Parse(initalStat)
 	// looking for the max len of queue
 	// if max is upper than threshold, trigger an alert
@@ -188,15 +188,17 @@ func (t *Term) Run() {
 	}
 	defer ui.Close()
 
-	initalStat, err := os.Stat(t.logfile)
+	go t.ParseWithNotify()
+
+	/*initalStat, err := os.Stat(t.logfile)
 	if err != nil {
 		panic(err)
-	}
+	}*/
 
 	t.statistics = make(map[string]int)
 
 	dashboard := t.makeDashboard()
-
+	fmt.Println("cici")
 	updateParagraph := func(count int) {
 		if count%2 == 0 {
 			dashboard.pa.TextStyle.Fg = ui.ColorRed
@@ -210,7 +212,7 @@ func (t *Term) Run() {
 	max := 0
 	tickerCount := 1
 	// init dashboard
-	drawDashboard(initalStat, t, dashboard, &max)
+	drawDashboard(t, dashboard, &max)
 	tickerCount++
 	uiEvents := ui.PollEvents()
 
@@ -225,10 +227,9 @@ func (t *Term) Run() {
 				return
 			}
 		case <-tickerUI:
-			drawDashboard(initalStat, t, dashboard, &max)
+			drawDashboard(t, dashboard, &max)
 		case <-tickerParser:
 			updateParagraph(tickerCount)
-			t.Parse(initalStat)
 			tickerCount++
 		}
 	}
