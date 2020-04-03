@@ -69,7 +69,7 @@ $ go build -o ./bin/dd-monitoring ./cmd/cli && ./bin/dd-monitoring -threshold 20
 - [termUi](https://github.com/gizak/termui) - Golang terminal dashboard
 - [standard layoug](https://github.com/golang-standards/project-layout) - Standard Go Project Layout
 - [daemon-golang](https://github.com/takama/daemon) - A daemon package for use with Go (golang) services with no dependencies
-
+- [fsnotify](https://github.com/fsnotify/fsnotify) - Cross-platform file system notifications for Go
 
 ## Versioning
 
