@@ -12,36 +12,6 @@ import (
 var reDate = regexp.MustCompile(`(?m)\[(.+)\]`)
 var reSec = regexp.MustCompile(`\s/([a-z]+)`)
 
-// Parse logfile file to get new line added
-func (t *Term) Parse(initialState os.FileInfo) {
-	// no have previous
-	// so previous = currentState
-	if t.previousState == nil {
-		t.previousState = initialState
-	}
-	initialState, _ = os.Stat(t.logfile)
-	// use the file size before a trafic in log file it's observed
-	// and substract it to current file size to get a len and cap value of new lines added
-	buf := make([]byte,
-		initialState.Size()-t.previousState.Size(),
-		initialState.Size()-t.previousState.Size(),
-	)
-	// if the init size and the current size are different and the update date are different
-	if t.previousState.Size() != initialState.Size() && t.previousState.ModTime() != initialState.ModTime() {
-		file, err := os.Open(t.logfile)
-		if err != nil {
-			panic(err)
-		}
-		defer file.Close()
-
-		start := t.previousState.Size()
-		file.ReadAt(buf, start)
-		t.parseLine(buf)
-	}
-	// new lines are managed, move on tail of file
-	t.previousState, _ = os.Stat(t.logfile)
-}
-
 // ParseWithNotify ParseWithNotify
 func (t *Term) ParseWithNotify() error {
 	file, _ := os.Open(t.logfile)

@@ -190,11 +190,6 @@ func (t *Term) Run() {
 
 	go t.ParseWithNotify()
 
-	/*initalStat, err := os.Stat(t.logfile)
-	if err != nil {
-		panic(err)
-	}*/
-
 	t.statistics = make(map[string]int)
 
 	dashboard := t.makeDashboard()
