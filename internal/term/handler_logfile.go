@@ -12,12 +12,23 @@ import (
 var reDate = regexp.MustCompile(`(?m)\[(.+)\]`)
 var reSec = regexp.MustCompile(`\s/([a-z]+)`)
 
+type line struct {
+	date    string
+	section string
+}
+
+// LogData manage logfile details
+type LogData struct {
+	queue   []line
+	logfile string
+}
+
 // ParseWithNotify ParseWithNotify
-func (t *Term) ParseWithNotify() error {
-	file, _ := os.Open(t.logfile)
+func (l *LogData) ParseWithNotify() error {
+	file, _ := os.Open(l.logfile)
 	watcher, _ := fsnotify.NewWatcher()
 	defer watcher.Close()
-	_ = watcher.Add(t.logfile)
+	_ = watcher.Add(l.logfile)
 
 	file.Seek(0, os.SEEK_END)
 	r := bufio.NewReader(file)
@@ -26,7 +37,7 @@ func (t *Term) ParseWithNotify() error {
 		if err != nil && err != io.EOF {
 			return err
 		}
-		t.parseLine(by)
+		l.parseLine(by)
 		if err != io.EOF {
 			continue
 		}
@@ -50,7 +61,7 @@ func waitForChange(w *fsnotify.Watcher) error {
 }
 
 // get all section found in new lines added
-func (t *Term) parseLine(b []byte) {
+func (l *LogData) parseLine(b []byte) {
 	sections := reSec.FindAllString(string(b), -1)
 	dates := reDate.FindAllString(string(b), -1)
 
@@ -60,5 +71,5 @@ func (t *Term) parseLine(b []byte) {
 		queueInfo[i].date = dates[i]
 	}
 
-	t.queue = append(t.queue, queueInfo...)
+	l.queue = append(l.queue, queueInfo...)
 }
