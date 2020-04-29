@@ -128,7 +128,8 @@ func drawAlert(t *Term, d *dashboard, max *int) {
 
 func drawList(d *dashboard, t *Term) {
 	if len(t.logConf.queue) != 0 {
-		d.l.Rows = append(d.l.Rows, fmt.Sprint(t.logConf.queue[0].date, " - ", t.logConf.queue[0].section))
+		date, _ := time.Parse("02/Jan/2006:15:04:05 -0700", t.logConf.queue[0].date)
+		d.l.Rows = append(d.l.Rows, fmt.Sprint(t.logConf.queue[0].httpCode, " - ", date.Local(), " - ", t.logConf.queue[0].section))
 		d.l.Rows = d.l.Rows[1:]
 	}
 }
@@ -176,13 +177,15 @@ func drawDashboard(t *Term, d *dashboard, max *int) {
 }
 
 // Run dashboard
-func (t *Term) Run() {
+func (t *Term) Run() error {
 	if err := ui.Init(); err != nil {
 		log.Fatalf("failed to initialize termui: %v", err)
 	}
 	defer ui.Close()
+	// create a chan to manage error in go routine
+	errc := make(chan error)
 
-	go t.logConf.ParseWithNotify()
+	go t.logConf.ParseWithNotify(errc)
 
 	t.statistics = make(map[string]int)
 
@@ -210,10 +213,12 @@ func (t *Term) Run() {
 
 	for {
 		select {
+		case err := <-errc:
+			return err
 		case e := <-uiEvents:
 			switch e.ID {
 			case "q", "<C-c>":
-				return
+				return nil
 			}
 		case <-tickerUI:
 			drawDashboard(t, dashboard, &max)

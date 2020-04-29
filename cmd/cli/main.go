@@ -3,6 +3,7 @@ package main
 import (
 	"flag"
 	"fmt"
+	"log"
 	"strconv"
 
 	"github.com/Royalsspirit/dd-dm/internal/term"
@@ -23,5 +24,9 @@ func main() {
 		Threshold: thresholdValue,
 	})
 
-	t.Run()
+	err := t.Run()
+
+	if err != nil {
+		log.Fatal(err)
+	}
 }
