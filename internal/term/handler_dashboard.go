@@ -190,7 +190,7 @@ func (t *Term) Run() error {
 	t.statistics = make(map[string]int)
 
 	dashboard := t.makeDashboard()
-	fmt.Println("cici")
+
 	updateParagraph := func(count int) {
 		if count%2 == 0 {
 			dashboard.pa.TextStyle.Fg = ui.ColorRed
