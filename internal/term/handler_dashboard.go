@@ -28,12 +28,28 @@ type dashboard struct {
 	b  *widgets.BarChart
 	l  *widgets.List
 	pa *widgets.Paragraph
+	p2 *widgets.Paragraph
 }
 
 // Conf contain a cli parameter required to run a dashboard
 type Conf struct {
 	Logfile   string
 	Threshold int
+}
+
+var orderHTTPCode = []string{
+	"5xx",
+	"4xx",
+	"3xx",
+	"2xx",
+	"1xx",
+}
+var tplHTTPUsade = map[string]int{
+	"5xx": 0,
+	"4xx": 0,
+	"3xx": 0,
+	"2xx": 0,
+	"1xx": 0,
 }
 
 // NewTerm create a newTerm configuration
@@ -49,10 +65,16 @@ func NewTerm(conf *Conf) *Term {
 
 func (t *Term) makeDashboard() *dashboard {
 	p := widgets.NewParagraph()
-	p.Title = "Alert"
+	p.Title = "HTTP Usage"
 	p.SetRect(0, 0, 80, 5)
 	p.TextStyle.Fg = ui.ColorWhite
 	p.BorderStyle.Fg = ui.ColorCyan
+
+	p2 := widgets.NewParagraph()
+	p2.Title = "History"
+	p2.SetRect(80, 0, 119, 30)
+	p2.TextStyle.Fg = ui.ColorWhite
+	p2.BorderStyle.Fg = ui.ColorCyan
 
 	// default list value
 	listData := []string{
@@ -69,7 +91,7 @@ func (t *Term) makeDashboard() *dashboard {
 	l := widgets.NewList()
 	l.Title = "Log"
 	l.Rows = listData
-	l.SetRect(0, 20, 50, 5)
+	l.SetRect(0, 5, 50, 20)
 	l.TextStyle.Fg = ui.ColorYellow
 
 	bc := widgets.NewBarChart()
@@ -90,7 +112,7 @@ func (t *Term) makeDashboard() *dashboard {
 	lc2.AxesColor = ui.ColorWhite
 	lc2.LineColors[0] = ui.ColorYellow
 
-	result := dashboard{b: bc, p: lc2, l: l, pa: p}
+	result := dashboard{b: bc, p: lc2, l: l, pa: p, p2: p2}
 	return &result
 }
 
@@ -169,11 +191,36 @@ func drawDashboard(t *Term, d *dashboard, max *int) {
 	t.sinData = append(t.sinData, float64(t.sum))
 
 	drawLine(d, t)
-
 	d.b.Data = t.barchartData
 	d.b.Labels = t.bcLabels
 
+	var httpCodeDetails string
+	// try to imprive this code
+	for k, v := range orderHTTPCode {
+		var currentValue string
+		if t.logConf.recapUsage[v] != 0 {
+			currentValue = strconv.Itoa(t.logConf.recapUsage[v])
+			// display value only once
+			t.logConf.recapUsage[v] = 0
+		} else {
+			currentValue = strconv.Itoa(tplHTTPUsade[v])
+		}
+
+		httpCodeDetails += v + ": " + currentValue + "     "
+
+		if k > 0 && k%4 == 0 {
+			httpCodeDetails += "\n"
+		}
+	}
+
+	t.logConf.totalDataHandle += t.logConf.dataHandle
+
+	d.pa.Text = fmt.Sprint(httpCodeDetails, "Total Requests RX: ", t.logConf.totalDataHandle, " B", "              Rx/s: ", t.logConf.dataHandle)
+
 	ui.Render(d.p, d.l, d.b, d.pa)
+
+	t.logConf.dataHandle = 0
+
 }
 
 // Run dashboard
@@ -188,17 +235,18 @@ func (t *Term) Run() error {
 	go t.logConf.ParseWithNotify(errc)
 
 	t.statistics = make(map[string]int)
-
+	t.logConf.recapUsage = tplHTTPUsade
 	dashboard := t.makeDashboard()
 
 	updateParagraph := func(count int) {
 		if count%2 == 0 {
-			dashboard.pa.TextStyle.Fg = ui.ColorRed
+			dashboard.p2.TextStyle.Fg = ui.ColorRed
 		} else {
-			dashboard.pa.TextStyle.Fg = ui.ColorWhite
+			dashboard.p2.TextStyle.Fg = ui.ColorWhite
 		}
-		ui.Render(dashboard.pa)
+		ui.Render(dashboard.p2)
 	}
+
 	t.start = time.Now()
 	t.sum = 0
 	max := 0
