@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"log"
 	"math"
-	"os"
 	"strconv"
 	"time"
 
@@ -12,23 +11,16 @@ import (
 	"github.com/gizak/termui/v3/widgets"
 )
 
-type line struct {
-	date    string
-	section string
-}
-
 // Term blabla
 type Term struct {
-	previousState os.FileInfo
-	queue         []line
-	barchartData  []float64
-	bcLabels      []string
-	statistics    map[string]int
-	sum           int
-	logfile       string
-	sinData       []float64
-	threshold     int
-	start         time.Time
+	barchartData []float64
+	bcLabels     []string
+	statistics   map[string]int
+	sum          int
+	logConf      LogData
+	sinData      []float64
+	threshold    int
+	start        time.Time
 }
 
 type dashboard struct {
@@ -47,7 +39,9 @@ type Conf struct {
 // NewTerm create a newTerm configuration
 func NewTerm(conf *Conf) *Term {
 	return &Term{
-		logfile:   conf.Logfile,
+		logConf: LogData{
+			logfile: conf.Logfile,
+		},
 		threshold: conf.Threshold,
 		start:     time.Now(),
 	}
@@ -101,11 +95,11 @@ func (t *Term) makeDashboard() *dashboard {
 }
 
 func drawBarchart(t *Term) {
-	t.statistics[t.queue[0].section]++
+	t.statistics[t.logConf.queue[0].section]++
 	match := false
-	pourcent := (float64(t.statistics[t.queue[0].section]) / float64(t.sum)) * 100
+	pourcent := (float64(t.statistics[t.logConf.queue[0].section]) / float64(t.sum)) * 100
 	for k, v := range t.bcLabels {
-		if v == t.queue[0].section {
+		if v == t.logConf.queue[0].section {
 			t.barchartData[k] = math.Ceil(pourcent*100) / 100
 			match = true
 		} else {
@@ -114,7 +108,7 @@ func drawBarchart(t *Term) {
 		}
 	}
 	if !match {
-		t.bcLabels = append(t.bcLabels, t.queue[0].section)
+		t.bcLabels = append(t.bcLabels, t.logConf.queue[0].section)
 		t.barchartData = append(t.barchartData, math.Ceil(pourcent*100)/100)
 	}
 }
@@ -133,8 +127,9 @@ func drawAlert(t *Term, d *dashboard, max *int) {
 }
 
 func drawList(d *dashboard, t *Term) {
-	if len(t.queue) != 0 {
-		d.l.Rows = append(d.l.Rows, fmt.Sprint(t.queue[0].date, " - ", t.queue[0].section))
+	if len(t.logConf.queue) != 0 {
+		date, _ := time.Parse("02/Jan/2006:15:04:05 -0700", t.logConf.queue[0].date)
+		d.l.Rows = append(d.l.Rows, fmt.Sprint(t.logConf.queue[0].httpCode, " - ", date.Local(), " - ", t.logConf.queue[0].section))
 		d.l.Rows = d.l.Rows[1:]
 	}
 }
@@ -153,19 +148,19 @@ func drawDashboard(t *Term, d *dashboard, max *int) {
 	//	t.Parse(initalStat)
 	// looking for the max len of queue
 	// if max is upper than threshold, trigger an alert
-	if len(t.queue) > *max {
-		*max = len(t.queue)
+	if len(t.logConf.queue) > *max {
+		*max = len(t.logConf.queue)
 	}
 
-	if len(t.queue) > 0 {
-		for len(t.queue) > 0 {
+	if len(t.logConf.queue) > 0 {
+		for len(t.logConf.queue) > 0 {
 			t.sum++
 
 			drawBarchart(t)
 
 			drawList(d, t)
 
-			t.queue = t.queue[1:]
+			t.logConf.queue = t.logConf.queue[1:]
 		}
 	}
 
@@ -182,18 +177,20 @@ func drawDashboard(t *Term, d *dashboard, max *int) {
 }
 
 // Run dashboard
-func (t *Term) Run() {
+func (t *Term) Run() error {
 	if err := ui.Init(); err != nil {
 		log.Fatalf("failed to initialize termui: %v", err)
 	}
 	defer ui.Close()
+	// create a chan to manage error in go routine
+	errc := make(chan error)
 
-	go t.ParseWithNotify()
+	go t.logConf.ParseWithNotify(errc)
 
 	t.statistics = make(map[string]int)
 
 	dashboard := t.makeDashboard()
-	fmt.Println("cici")
+
 	updateParagraph := func(count int) {
 		if count%2 == 0 {
 			dashboard.pa.TextStyle.Fg = ui.ColorRed
@@ -216,10 +213,12 @@ func (t *Term) Run() {
 
 	for {
 		select {
+		case err := <-errc:
+			return err
 		case e := <-uiEvents:
 			switch e.ID {
 			case "q", "<C-c>":
-				return
+				return nil
 			}
 		case <-tickerUI:
 			drawDashboard(t, dashboard, &max)

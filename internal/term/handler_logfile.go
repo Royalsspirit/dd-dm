@@ -11,27 +11,42 @@ import (
 
 var reDate = regexp.MustCompile(`(?m)\[(.+)\]`)
 var reSec = regexp.MustCompile(`\s/([a-z]+)`)
+var resHTTPCode = regexp.MustCompile(`(?m)HTTP\/[0-9\.]+\s([0-9]{3})`)
+
+type line struct {
+	date     string
+	section  string
+	httpCode string
+}
+
+// LogData manage logfile details
+type LogData struct {
+	queue   []line
+	logfile string
+}
 
 // ParseWithNotify ParseWithNotify
-func (t *Term) ParseWithNotify() error {
-	file, _ := os.Open(t.logfile)
+func (l *LogData) ParseWithNotify(errC chan error) error {
+	file, _ := os.Open(l.logfile)
 	watcher, _ := fsnotify.NewWatcher()
 	defer watcher.Close()
-	_ = watcher.Add(t.logfile)
-
+	errWatcher := watcher.Add(l.logfile)
+	if errWatcher != nil {
+		errC <- errWatcher
+	}
 	file.Seek(0, os.SEEK_END)
 	r := bufio.NewReader(file)
 	for {
 		by, err := r.ReadBytes('\n')
 		if err != nil && err != io.EOF {
-			return err
+			errC <- err
 		}
-		t.parseLine(by)
+		l.parseLine(by)
 		if err != io.EOF {
 			continue
 		}
 		if err = waitForChange(watcher); err != nil {
-			return err
+			errC <- err
 		}
 	}
 }
@@ -50,15 +65,17 @@ func waitForChange(w *fsnotify.Watcher) error {
 }
 
 // get all section found in new lines added
-func (t *Term) parseLine(b []byte) {
+func (l *LogData) parseLine(b []byte) {
 	sections := reSec.FindAllString(string(b), -1)
-	dates := reDate.FindAllString(string(b), -1)
+	dates := reDate.FindAllStringSubmatch(string(b), -1)
+	httpCode := resHTTPCode.FindAllStringSubmatch(string(b), -1)
 
 	queueInfo := make([]line, len(sections))
 	for i := 0; i < len(sections); i++ {
 		queueInfo[i].section = sections[i]
-		queueInfo[i].date = dates[i]
+		queueInfo[i].date = dates[i][1]
+		queueInfo[i].httpCode = httpCode[i][1]
 	}
 
-	t.queue = append(t.queue, queueInfo...)
+	l.queue = append(l.queue, queueInfo...)
 }
