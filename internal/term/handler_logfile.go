@@ -2,6 +2,7 @@ package term
 
 import (
 	"bufio"
+	"fmt"
 	"io"
 	"os"
 	"regexp"
@@ -21,10 +22,11 @@ type line struct {
 
 // LogData manage logfile details
 type LogData struct {
-	queue      []line
-	logfile    string
-	recapUsage map[string]int
-	dataHandle float64
+	queue           []line
+	logfile         string
+	recapUsage      map[string]int
+	dataHandle      float64
+	totalDataHandle float64
 }
 
 // ParseWithNotify ParseWithNotify
@@ -40,7 +42,6 @@ func (l *LogData) ParseWithNotify(errC chan error) error {
 
 	file.Seek(0, os.SEEK_END)
 	r := bufio.NewReader(file)
-
 	for {
 		by, err := r.ReadBytes('\n')
 		if err != nil && err != io.EOF {
@@ -86,7 +87,7 @@ func (l *LogData) parseLine(b []byte) {
 		queueInfo[i].section = sections[i]
 		queueInfo[i].date = dates[i][1]
 		queueInfo[i].httpCode = httpCode[i][1]
-		l.recapUsage[httpCode[i][1]]++
+		l.recapUsage[fmt.Sprint(httpCode[i][1][:1], "xx")]++
 	}
 
 	l.queue = append(l.queue, queueInfo...)

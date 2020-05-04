@@ -37,9 +37,20 @@ type Conf struct {
 	Threshold int
 }
 
-var tplHttpUsage = `
- 5xx: 0     4xx: 0       Total Requests: 0
- 3xx: 0     2xx: 0       `
+var orderHTTPCode = []string{
+	"5xx",
+	"4xx",
+	"3xx",
+	"2xx",
+	"1xx",
+}
+var tplHTTPUsade = map[string]int{
+	"5xx": 0,
+	"4xx": 0,
+	"3xx": 0,
+	"2xx": 0,
+	"1xx": 0,
+}
 
 // NewTerm create a newTerm configuration
 func NewTerm(conf *Conf) *Term {
@@ -185,18 +196,29 @@ func drawDashboard(t *Term, d *dashboard, max *int) {
 
 	var httpCodeDetails string
 	// try to imprive this code
-	for k, v := range t.logConf.recapUsage {
-		httpCodeDetails += k + ": " + strconv.Itoa(v) + " "
+	for k, v := range orderHTTPCode {
+		var currentValue string
+		if t.logConf.recapUsage[v] != 0 {
+			currentValue = strconv.Itoa(t.logConf.recapUsage[v])
+			// display value only once
+			t.logConf.recapUsage[v] = 0
+		} else {
+			currentValue = strconv.Itoa(tplHTTPUsade[v])
+		}
+
+		httpCodeDetails += v + ": " + currentValue + "     "
+
+		if k > 0 && k%4 == 0 {
+			httpCodeDetails += "\n"
+		}
 	}
 
-	if httpCodeDetails == "" {
-		httpCodeDetails = tplHttpUsage
-	}
-	d.pa.Text = fmt.Sprint(httpCodeDetails, "Rx/s: ", t.logConf.dataHandle, " B/s")
+	t.logConf.totalDataHandle += t.logConf.dataHandle
+
+	d.pa.Text = fmt.Sprint(httpCodeDetails, "Total Requests RX: ", t.logConf.totalDataHandle, " B", "              Rx/s: ", t.logConf.dataHandle)
 
 	ui.Render(d.p, d.l, d.b, d.pa)
 
-	t.logConf.recapUsage = make(map[string]int)
 	t.logConf.dataHandle = 0
 
 }
@@ -213,7 +235,7 @@ func (t *Term) Run() error {
 	go t.logConf.ParseWithNotify(errc)
 
 	t.statistics = make(map[string]int)
-	t.logConf.recapUsage = make(map[string]int)
+	t.logConf.recapUsage = tplHTTPUsade
 	dashboard := t.makeDashboard()
 
 	updateParagraph := func(count int) {
