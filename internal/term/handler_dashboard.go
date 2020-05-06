@@ -135,16 +135,17 @@ func drawBarchart(t *Term) {
 	}
 }
 
-func drawAlert(t *Term, d *dashboard, max *int) {
-	current := time.Now()
-	// constraint:
-	// Whenever total traffic for the past 2 minutes exceeds a certain number on average
-	if current.Sub(t.start).Seconds() >= 120 {
-		if *max > t.threshold {
-			d.pa.Text = "High traffic generated an alert - hits = " + strconv.Itoa(*max) + ", triggered at " + current.Format(time.UnixDate)
-			t.start = time.Now()
+func drawAlert(t *Term, d *dashboard) {
+	if len(t.logConf.alert.messages) > 0 {
+		for _, v := range t.logConf.alert.messages {
+			d.p2.Text += v
 		}
-		*max = 0
+		t.logConf.alert.messages = []string{}
+	} else {
+		if t.logConf.alert.highTraffic == true {
+			d.p2.Text += "Recovered triggered at " + time.Now().String() + "\n"
+			t.logConf.alert.highTraffic = false
+		}
 	}
 }
 
@@ -166,14 +167,7 @@ func drawLine(d *dashboard, t *Term) {
 }
 
 // every 10 seconds draw the dashboard
-func drawDashboard(t *Term, d *dashboard, max *int) {
-	//	t.Parse(initalStat)
-	// looking for the max len of queue
-	// if max is upper than threshold, trigger an alert
-	if len(t.logConf.queue) > *max {
-		*max = len(t.logConf.queue)
-	}
-
+func drawDashboard(t *Term, d *dashboard) {
 	if len(t.logConf.queue) > 0 {
 		for len(t.logConf.queue) > 0 {
 			t.sum++
@@ -186,7 +180,7 @@ func drawDashboard(t *Term, d *dashboard, max *int) {
 		}
 	}
 
-	drawAlert(t, d, max)
+	drawAlert(t, d)
 
 	t.sinData = append(t.sinData, float64(t.sum))
 
@@ -232,7 +226,7 @@ func (t *Term) Run() error {
 	// create a chan to manage error in go routine
 	errc := make(chan error)
 
-	go t.logConf.ParseWithNotify(errc)
+	go t.logConf.ParseWithNotify(errc, t.threshold)
 
 	t.statistics = make(map[string]int)
 	t.logConf.recapUsage = tplHTTPUsade
@@ -249,10 +243,9 @@ func (t *Term) Run() error {
 
 	t.start = time.Now()
 	t.sum = 0
-	max := 0
 	tickerCount := 1
 	// init dashboard
-	drawDashboard(t, dashboard, &max)
+	drawDashboard(t, dashboard)
 	tickerCount++
 	uiEvents := ui.PollEvents()
 
@@ -269,7 +262,7 @@ func (t *Term) Run() error {
 				return nil
 			}
 		case <-tickerUI:
-			drawDashboard(t, dashboard, &max)
+			drawDashboard(t, dashboard)
 		case <-tickerParser:
 			updateParagraph(tickerCount)
 			tickerCount++

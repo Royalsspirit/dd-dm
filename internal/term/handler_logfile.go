@@ -6,6 +6,8 @@ import (
 	"io"
 	"os"
 	"regexp"
+	"strconv"
+	"time"
 
 	"github.com/fsnotify/fsnotify"
 )
@@ -19,6 +21,10 @@ type line struct {
 	section  string
 	httpCode string
 }
+type state struct {
+	messages    []string
+	highTraffic bool
+}
 
 // LogData manage logfile details
 type LogData struct {
@@ -27,10 +33,11 @@ type LogData struct {
 	recapUsage      map[string]int
 	dataHandle      float64
 	totalDataHandle float64
+	alert           state
 }
 
 // ParseWithNotify ParseWithNotify
-func (l *LogData) ParseWithNotify(errC chan error) error {
+func (l *LogData) ParseWithNotify(errC chan error, threshold int) error {
 	file, _ := os.Open(l.logfile)
 	watcher, _ := fsnotify.NewWatcher()
 	defer watcher.Close()
@@ -42,6 +49,7 @@ func (l *LogData) ParseWithNotify(errC chan error) error {
 
 	file.Seek(0, os.SEEK_END)
 	r := bufio.NewReader(file)
+	var i int = 0
 	for {
 		by, err := r.ReadBytes('\n')
 		if err != nil && err != io.EOF {
@@ -49,10 +57,23 @@ func (l *LogData) ParseWithNotify(errC chan error) error {
 		}
 
 		if err != io.EOF {
+			i++
 			l.parseLine(by)
 			l.dataHandle += float64(len(by)) / 1000
 
 			continue
+		}
+		if err == io.EOF {
+			if i > threshold {
+				l.alert.messages = append(l.alert.messages, "High traffic generated an alert - hits = "+strconv.Itoa(i)+", triggered at "+time.Now().String()+"\n")
+				l.alert.highTraffic = true
+			}
+
+			if l.alert.highTraffic && i < threshold {
+				l.alert.messages = append(l.alert.messages, "Recovered triggered at "+time.Now().String()+"\n")
+				l.alert.highTraffic = false
+			}
+			i = 0
 		}
 		if err = waitForChange(watcher); err != nil {
 			errC <- err
