@@ -137,27 +137,7 @@ func drawBarchart(t *Term) {
 
 func drawAlert(t *Term, d *dashboard) {
 	currentTime := time.Now()
-	var savedIndex int = 0
-	for k, v := range t.logConf.alert.history {
-		if currentTime.Sub(v).Seconds() > 120 {
-			savedIndex = k
-		}
-	}
-
-	t.logConf.alert.history = t.logConf.alert.history[savedIndex:]
-
-	if (float64(len(t.logConf.alert.history)) / 120) > float64(t.threshold) {
-		if t.logConf.alert.highTraffic == false {
-			d.p2.Text += "High traffic generated an alert - hits =" + strconv.Itoa(len(t.logConf.alert.history)) + ", triggered at " + time.Now().String() + "\n"
-			t.logConf.alert.highTraffic = true
-		}
-	} else {
-		if t.logConf.alert.highTraffic == true {
-			d.p2.Text += "Recovered triggered at " + time.Now().String() + "\n"
-			t.logConf.alert.highTraffic = false
-
-		}
-	}
+	d.p2.Text += t.logConf.alert.declare(currentTime, t.threshold)
 }
 
 func drawList(d *dashboard, t *Term) {

@@ -20,10 +20,6 @@ type line struct {
 	section  string
 	httpCode string
 }
-type state struct {
-	history     []time.Time
-	highTraffic bool
-}
 
 // LogData manage logfile details
 type LogData struct {
@@ -63,6 +59,7 @@ func (l *LogData) ParseWithNotify(errC chan error, threshold int) error {
 		}
 
 		if err = waitForChange(watcher); err != nil {
+			fmt.Println("event", err)
 			errC <- err
 		}
 	}
