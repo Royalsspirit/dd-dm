@@ -66,13 +66,13 @@ func NewTerm(conf *Conf) *Term {
 func (t *Term) makeDashboard() *dashboard {
 	p := widgets.NewParagraph()
 	p.Title = "HTTP Usage"
-	p.SetRect(0, 0, 80, 5)
+	//p.SetRect(0, 0, 80, 5)
 	p.TextStyle.Fg = ui.ColorWhite
 	p.BorderStyle.Fg = ui.ColorCyan
 
 	p2 := widgets.NewParagraph()
 	p2.Title = "History"
-	p2.SetRect(80, 0, 119, 30)
+	//p2.SetRect(80, 0, 119, 30)
 	p2.TextStyle.Fg = ui.ColorWhite
 	p2.BorderStyle.Fg = ui.ColorCyan
 
@@ -91,24 +91,24 @@ func (t *Term) makeDashboard() *dashboard {
 	l := widgets.NewList()
 	l.Title = "Log"
 	l.Rows = listData
-	l.SetRect(0, 5, 50, 20)
+	//l.SetRect(0, 5, 50, 20)
 	l.TextStyle.Fg = ui.ColorYellow
 
 	bc := widgets.NewBarChart()
 	bc.Title = "Pourcentage of each section"
-	bc.SetRect(50, 5, 80, 20)
+	//bc.SetRect(50, 5, 80, 20)
 	bc.BarWidth = 6
 	bc.LabelStyles = []ui.Style{ui.NewStyle(ui.ColorBlue)}
 	bc.NumStyles = []ui.Style{ui.NewStyle(ui.ColorBlack)}
 
 	// make a slice with a len of 73 corresponding to barchart width
-	t.sinData = make([]float64, 73)
+	t.sinData = make([]float64, 50)
 
 	lc2 := widgets.NewPlot()
 	lc2.Title = "Number of requests"
 	lc2.Data = make([][]float64, 1)
 	lc2.Data[0] = t.sinData
-	lc2.SetRect(0, 20, 80, 30)
+	//lc2.SetRect(0, 20, 80, 30)
 	lc2.AxesColor = ui.ColorWhite
 	lc2.LineColors[0] = ui.ColorYellow
 
@@ -150,7 +150,7 @@ func drawList(d *dashboard, t *Term) {
 
 func drawLine(d *dashboard, t *Term) {
 	d.p.Data[0] = t.sinData
-	if len(t.sinData) > 72 {
+	if len(t.sinData) > 50 {
 		t.sinData = t.sinData[2:]
 	} else {
 		t.sinData = append(t.sinData, t.sinData[len(t.sinData)-1])
@@ -174,7 +174,7 @@ func drawDashboard(t *Term, d *dashboard) {
 	drawAlert(t, d)
 
 	t.sinData = append(t.sinData, float64(t.sum))
-
+	termWidth, termHeight := ui.TerminalDimensions()
 	drawLine(d, t)
 	d.b.Data = t.barchartData
 	d.b.Labels = t.bcLabels
@@ -202,7 +202,25 @@ func drawDashboard(t *Term, d *dashboard) {
 
 	d.pa.Text = fmt.Sprint(httpCodeDetails, "Total Requests RX: ", t.logConf.totalDataHandle, " B", "              Rx/s: ", t.logConf.dataHandle)
 
-	ui.Render(d.p, d.l, d.b, d.pa)
+	grid := ui.NewGrid()
+
+	grid.SetRect(0, 0, termWidth, termHeight)
+
+	grid.Set(
+		ui.NewRow(1.0,
+			ui.NewCol(1.0/2,
+				ui.NewRow(1.0/3, d.pa),
+				ui.NewRow(1.0/3,
+					ui.NewCol(1.0/2, d.l),
+					ui.NewCol(1.0/2, d.b),
+				),
+				ui.NewRow(1.0/3, d.p),
+			),
+			ui.NewCol(1.0/2, d.p2),
+		),
+	)
+
+	ui.Render(grid)
 
 	t.logConf.dataHandle = 0
 
