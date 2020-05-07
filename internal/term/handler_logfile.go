@@ -6,7 +6,6 @@ import (
 	"io"
 	"os"
 	"regexp"
-	"strconv"
 	"time"
 
 	"github.com/fsnotify/fsnotify"
@@ -22,7 +21,7 @@ type line struct {
 	httpCode string
 }
 type state struct {
-	messages    []string
+	history     []time.Time
 	highTraffic bool
 }
 
@@ -49,7 +48,6 @@ func (l *LogData) ParseWithNotify(errC chan error, threshold int) error {
 
 	file.Seek(0, os.SEEK_END)
 	r := bufio.NewReader(file)
-	var i int = 0
 	for {
 		by, err := r.ReadBytes('\n')
 		if err != nil && err != io.EOF {
@@ -57,24 +55,13 @@ func (l *LogData) ParseWithNotify(errC chan error, threshold int) error {
 		}
 
 		if err != io.EOF {
-			i++
+			l.alert.history = append(l.alert.history, time.Now())
 			l.parseLine(by)
 			l.dataHandle += float64(len(by)) / 1000
 
 			continue
 		}
-		if err == io.EOF {
-			if i > threshold {
-				l.alert.messages = append(l.alert.messages, "High traffic generated an alert - hits = "+strconv.Itoa(i)+", triggered at "+time.Now().String()+"\n")
-				l.alert.highTraffic = true
-			}
 
-			if l.alert.highTraffic && i < threshold {
-				l.alert.messages = append(l.alert.messages, "Recovered triggered at "+time.Now().String()+"\n")
-				l.alert.highTraffic = false
-			}
-			i = 0
-		}
 		if err = waitForChange(watcher); err != nil {
 			errC <- err
 		}

@@ -136,15 +136,26 @@ func drawBarchart(t *Term) {
 }
 
 func drawAlert(t *Term, d *dashboard) {
-	if len(t.logConf.alert.messages) > 0 {
-		for _, v := range t.logConf.alert.messages {
-			d.p2.Text += v
+	currentTime := time.Now()
+	var savedIndex int = 0
+	for k, v := range t.logConf.alert.history {
+		if currentTime.Sub(v).Seconds() > 120 {
+			savedIndex = k
 		}
-		t.logConf.alert.messages = []string{}
+	}
+
+	t.logConf.alert.history = t.logConf.alert.history[savedIndex:]
+
+	if (float64(len(t.logConf.alert.history)) / 120) > float64(t.threshold) {
+		if t.logConf.alert.highTraffic == false {
+			d.p2.Text += "High traffic generated an alert - hits =" + strconv.Itoa(len(t.logConf.alert.history)) + ", triggered at " + time.Now().String() + "\n"
+			t.logConf.alert.highTraffic = true
+		}
 	} else {
 		if t.logConf.alert.highTraffic == true {
 			d.p2.Text += "Recovered triggered at " + time.Now().String() + "\n"
 			t.logConf.alert.highTraffic = false
+
 		}
 	}
 }
@@ -232,21 +243,15 @@ func (t *Term) Run() error {
 	t.logConf.recapUsage = tplHTTPUsade
 	dashboard := t.makeDashboard()
 
-	updateParagraph := func(count int) {
-		if count%2 == 0 {
-			dashboard.p2.TextStyle.Fg = ui.ColorRed
-		} else {
-			dashboard.p2.TextStyle.Fg = ui.ColorWhite
-		}
+	updateParagraph := func() {
+		dashboard.p2.TextStyle.Fg = ui.ColorWhite
 		ui.Render(dashboard.p2)
 	}
 
 	t.start = time.Now()
 	t.sum = 0
-	tickerCount := 1
 	// init dashboard
 	drawDashboard(t, dashboard)
-	tickerCount++
 	uiEvents := ui.PollEvents()
 
 	tickerUI := time.NewTicker(time.Second * 10).C
@@ -264,8 +269,7 @@ func (t *Term) Run() error {
 		case <-tickerUI:
 			drawDashboard(t, dashboard)
 		case <-tickerParser:
-			updateParagraph(tickerCount)
-			tickerCount++
+			updateParagraph()
 		}
 	}
 }
