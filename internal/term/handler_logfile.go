@@ -6,6 +6,7 @@ import (
 	"io"
 	"os"
 	"regexp"
+	"time"
 
 	"github.com/fsnotify/fsnotify"
 )
@@ -27,10 +28,11 @@ type LogData struct {
 	recapUsage      map[string]int
 	dataHandle      float64
 	totalDataHandle float64
+	alert           state
 }
 
 // ParseWithNotify ParseWithNotify
-func (l *LogData) ParseWithNotify(errC chan error) error {
+func (l *LogData) ParseWithNotify(errC chan error, threshold int) error {
 	file, _ := os.Open(l.logfile)
 	watcher, _ := fsnotify.NewWatcher()
 	defer watcher.Close()
@@ -49,12 +51,15 @@ func (l *LogData) ParseWithNotify(errC chan error) error {
 		}
 
 		if err != io.EOF {
+			l.alert.history = append(l.alert.history, time.Now())
 			l.parseLine(by)
 			l.dataHandle += float64(len(by)) / 1000
 
 			continue
 		}
+
 		if err = waitForChange(watcher); err != nil {
+			fmt.Println("event", err)
 			errC <- err
 		}
 	}
