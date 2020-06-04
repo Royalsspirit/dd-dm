@@ -102,7 +102,8 @@ func (t *Term) makeDashboard() *dashboard {
 	bc.NumStyles = []ui.Style{ui.NewStyle(ui.ColorBlack)}
 
 	// make a slice with a len of 73 corresponding to barchart width
-	t.sinData = make([]float64, 50)
+	termWidth, _ := ui.TerminalDimensions()
+	t.sinData = make([]float64, int(float64(termWidth)-40))
 
 	lc2 := widgets.NewPlot()
 	lc2.Title = "Number of requests"
@@ -149,12 +150,39 @@ func drawList(d *dashboard, t *Term) {
 }
 
 func drawLine(d *dashboard, t *Term) {
-	d.p.Data[0] = t.sinData
-	if len(t.sinData) > 50 {
-		t.sinData = t.sinData[2:]
-	} else {
-		t.sinData = append(t.sinData, t.sinData[len(t.sinData)-1])
+	/*
+		To resize properly the linechart plot with need to get the max x value if we suppose that
+		1 unit = 1 pixel
+
+	*/
+	d.p.Data[0] = t.sinData[1:]
+	point := d.p.Size()
+	/**
+		get max x value of linechart plot minus 7 (don't know why but it's better)
+	**/
+	size := point.X - 7 //int(float64(float64(termWidth)*0.4495) - 3)
+	/**
+	        in initialization, it happens that the size equal 0
+	**/
+	if size > 0 {
+		/**
+			in case of size it's bigger than previously
+			need to complete the slice from the beginning.
+			To do so, init new array with the difference from now and previously slice len
+		**/
+		if size > len(t.sinData) {
+			t.sinData = make([]float64, size-len(t.sinData))
+			for i := 0; i < len(t.sinData); i++ {
+				t.sinData[i] = d.p.Data[0][0]
+			}
+			t.sinData = append(t.sinData, d.p.Data[0]...)
+		} else {
+			t.sinData = t.sinData[len(t.sinData)-size:]
+		}
+
 	}
+
+	t.sinData = append(t.sinData, t.sinData[len(t.sinData)-1])
 }
 
 // every 10 seconds draw the dashboard
@@ -210,13 +238,13 @@ func drawDashboard(t *Term, d *dashboard) {
 		ui.NewRow(1.0,
 			ui.NewCol(1.0/2,
 				ui.NewRow(1.0/3, d.pa),
-				ui.NewRow(1.0/3,
-					ui.NewCol(1.0/2, d.l),
-					ui.NewCol(1.0/2, d.b),
-				),
+				ui.NewRow(1.0/3, d.b),
 				ui.NewRow(1.0/3, d.p),
 			),
-			ui.NewCol(1.0/2, d.p2),
+			ui.NewCol(1.0/2,
+				ui.NewRow(1.0/2, d.l),
+				ui.NewRow(1.0/2, d.p2),
+			),
 		),
 	)
 
