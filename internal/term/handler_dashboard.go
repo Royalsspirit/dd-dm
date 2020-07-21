@@ -37,20 +37,23 @@ type Conf struct {
 	Threshold int
 }
 
-var orderHTTPCode = []string{
-	"5xx",
-	"4xx",
-	"3xx",
-	"2xx",
-	"1xx",
-}
-var tplHTTPUsade = map[string]int{
-	"5xx": 0,
-	"4xx": 0,
-	"3xx": 0,
-	"2xx": 0,
-	"1xx": 0,
-}
+var (
+	orderHTTPCode = []string{
+		"5xx",
+		"4xx",
+		"3xx",
+		"2xx",
+		"1xx",
+	}
+	tplHTTPUsade = map[string]int{
+		"5xx": 0,
+		"4xx": 0,
+		"3xx": 0,
+		"2xx": 0,
+		"1xx": 0,
+	}
+	grid *ui.Grid
+)
 
 // NewTerm create a newTerm configuration
 func NewTerm(conf *Conf) *Term {
@@ -230,7 +233,7 @@ func drawDashboard(t *Term, d *dashboard) {
 
 	d.pa.Text = fmt.Sprint(httpCodeDetails, "Total Requests RX: ", t.logConf.totalDataHandle, " B", "              Rx/s: ", t.logConf.dataHandle)
 
-	grid := ui.NewGrid()
+	grid = ui.NewGrid()
 
 	grid.SetRect(0, 0, termWidth, termHeight)
 
@@ -289,6 +292,14 @@ func (t *Term) Run() error {
 			return err
 		case e := <-uiEvents:
 			switch e.ID {
+			case "<Resize>":
+				payload := e.Payload.(ui.Resize)
+				grid.SetRect(0, 0, payload.Width, payload.Height)
+				ui.Clear()
+				ui.Render(grid)
+				// need to call twice drawDashboard
+				//drawDashboard(t, dashboard)
+				//drawDashboard(t, dashboard)
 			case "q", "<C-c>":
 				return nil
 			}
