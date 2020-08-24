@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"log"
 	"math"
+	"os"
 	"strconv"
 	"time"
 
@@ -52,7 +53,8 @@ var (
 		"2xx": 0,
 		"1xx": 0,
 	}
-	grid *ui.Grid
+	grid         *ui.Grid
+	stderrLogger = log.New(os.Stderr, "", 0)
 )
 
 // NewTerm create a newTerm configuration
@@ -106,7 +108,8 @@ func (t *Term) makeDashboard() *dashboard {
 
 	// make a slice with a len of 73 corresponding to barchart width
 	termWidth, _ := ui.TerminalDimensions()
-	t.sinData = make([]float64, int(float64(termWidth)-40))
+	log.Println("init term ui", "width", termWidth, "size slice", int(termWidth/2)-5)
+	t.sinData = make([]float64, int(termWidth/2)-5)
 
 	lc2 := widgets.NewPlot()
 	lc2.Title = "Number of requests"
@@ -159,11 +162,15 @@ func drawLine(d *dashboard, t *Term) {
 
 	*/
 	d.p.Data[0] = t.sinData[1:]
-	point := d.p.Size()
+	//point := d.p.Size()
 	/**
 		get max x value of linechart plot minus 7 (don't know why but it's better)
 	**/
-	size := point.X - 7 //int(float64(float64(termWidth)*0.4495) - 3)
+	//size := point.X - 7 //int(float64(float64(termWidth)*0.4495) - 3)
+	termWidth, _ := ui.TerminalDimensions()
+	size := (termWidth / 2) - 5
+
+	log.Println("before", "size", size, "len sinddata", len(t.sinData))
 	/**
 	        in initialization, it happens that the size equal 0
 	**/
@@ -174,8 +181,9 @@ func drawLine(d *dashboard, t *Term) {
 			To do so, init new array with the difference from now and previously slice len
 		**/
 		if size > len(t.sinData) {
-			t.sinData = make([]float64, size-len(t.sinData))
-			for i := 0; i < len(t.sinData); i++ {
+			lineLength := size - len(t.sinData)
+			t.sinData = make([]float64, lineLength)
+			for i := 0; i < lineLength; i++ {
 				t.sinData[i] = d.p.Data[0][0]
 			}
 			t.sinData = append(t.sinData, d.p.Data[0]...)
@@ -186,6 +194,8 @@ func drawLine(d *dashboard, t *Term) {
 	}
 
 	t.sinData = append(t.sinData, t.sinData[len(t.sinData)-1])
+	log.Println("after", "size", size, "len sinddata", len(t.sinData))
+
 }
 
 // every 10 seconds draw the dashboard
@@ -259,6 +269,12 @@ func drawDashboard(t *Term, d *dashboard) {
 
 // Run dashboard
 func (t *Term) Run() error {
+	file, err := setupLogfile()
+	if err != nil {
+		log.Fatalf("failed to setup log file: %v", err)
+	}
+	defer file.Close()
+
 	if err := ui.Init(); err != nil {
 		log.Fatalf("failed to initialize termui: %v", err)
 	}
@@ -298,7 +314,7 @@ func (t *Term) Run() error {
 				ui.Clear()
 				ui.Render(grid)
 				// need to call twice drawDashboard
-				//drawDashboard(t, dashboard)
+				drawDashboard(t, dashboard)
 				//drawDashboard(t, dashboard)
 			case "q", "<C-c>":
 				return nil
