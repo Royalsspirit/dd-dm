@@ -246,11 +246,19 @@ func drawDashboard(t *Term, d *dashboard) {
 	grid = ui.NewGrid()
 
 	grid.SetRect(0, 0, termWidth, termHeight)
+	// try to create a table without cell separator
+	table1 := widgets.NewTable()
+	table1.TextAlignment = ui.AlignCenter
+	table1.Rows = [][]string{
+		[]string{"5xx: ", "12", "4xx :", "11", "3xx: ", "43", "2xx: ", "9", "1xx: ", "98"},
+	}
+	table1.RowSeparator = false
+	table1.TextStyle = ui.NewStyle(ui.ColorWhite)
 
 	grid.Set(
 		ui.NewRow(1.0,
 			ui.NewCol(1.0/2,
-				ui.NewRow(1.0/3, d.pa),
+				ui.NewRow(1.0/3, table1),
 				ui.NewRow(1.0/3, d.b),
 				ui.NewRow(1.0/3, d.p),
 			),
