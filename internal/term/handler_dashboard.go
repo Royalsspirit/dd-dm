@@ -4,9 +4,11 @@ import (
 	"fmt"
 	"log"
 	"math"
+	"os"
 	"strconv"
 	"time"
 
+	"github.com/Royalsspirit/dd-dm/internal/termui"
 	ui "github.com/gizak/termui/v3"
 	"github.com/gizak/termui/v3/widgets"
 )
@@ -37,20 +39,24 @@ type Conf struct {
 	Threshold int
 }
 
-var orderHTTPCode = []string{
-	"5xx",
-	"4xx",
-	"3xx",
-	"2xx",
-	"1xx",
-}
-var tplHTTPUsade = map[string]int{
-	"5xx": 0,
-	"4xx": 0,
-	"3xx": 0,
-	"2xx": 0,
-	"1xx": 0,
-}
+var (
+	orderHTTPCode = []string{
+		"5xx",
+		"4xx",
+		"3xx",
+		"2xx",
+		"1xx",
+	}
+	tplHTTPUsade = map[string]int{
+		"5xx": 0,
+		"4xx": 0,
+		"3xx": 0,
+		"2xx": 0,
+		"1xx": 0,
+	}
+	grid         *ui.Grid
+	stderrLogger = log.New(os.Stderr, "", 0)
+)
 
 // NewTerm create a newTerm configuration
 func NewTerm(conf *Conf) *Term {
@@ -66,13 +72,13 @@ func NewTerm(conf *Conf) *Term {
 func (t *Term) makeDashboard() *dashboard {
 	p := widgets.NewParagraph()
 	p.Title = "HTTP Usage"
-	p.SetRect(0, 0, 80, 5)
+	//p.SetRect(0, 0, 80, 5)
 	p.TextStyle.Fg = ui.ColorWhite
 	p.BorderStyle.Fg = ui.ColorCyan
 
 	p2 := widgets.NewParagraph()
 	p2.Title = "History"
-	p2.SetRect(80, 0, 119, 30)
+	//p2.SetRect(80, 0, 119, 30)
 	p2.TextStyle.Fg = ui.ColorWhite
 	p2.BorderStyle.Fg = ui.ColorCyan
 
@@ -91,24 +97,26 @@ func (t *Term) makeDashboard() *dashboard {
 	l := widgets.NewList()
 	l.Title = "Log"
 	l.Rows = listData
-	l.SetRect(0, 5, 50, 20)
+	//l.SetRect(0, 5, 50, 20)
 	l.TextStyle.Fg = ui.ColorYellow
 
 	bc := widgets.NewBarChart()
 	bc.Title = "Pourcentage of each section"
-	bc.SetRect(50, 5, 80, 20)
+	//bc.SetRect(50, 5, 80, 20)
 	bc.BarWidth = 6
 	bc.LabelStyles = []ui.Style{ui.NewStyle(ui.ColorBlue)}
 	bc.NumStyles = []ui.Style{ui.NewStyle(ui.ColorBlack)}
 
 	// make a slice with a len of 73 corresponding to barchart width
-	t.sinData = make([]float64, 73)
+	termWidth, _ := ui.TerminalDimensions()
+	log.Println("init term ui", "width", termWidth, "size slice", int(termWidth/2)-5)
+	t.sinData = make([]float64, int(termWidth/2)-5)
 
 	lc2 := widgets.NewPlot()
 	lc2.Title = "Number of requests"
 	lc2.Data = make([][]float64, 1)
 	lc2.Data[0] = t.sinData
-	lc2.SetRect(0, 20, 80, 30)
+	//lc2.SetRect(0, 20, 80, 30)
 	lc2.AxesColor = ui.ColorWhite
 	lc2.LineColors[0] = ui.ColorYellow
 
@@ -149,12 +157,46 @@ func drawList(d *dashboard, t *Term) {
 }
 
 func drawLine(d *dashboard, t *Term) {
-	d.p.Data[0] = t.sinData
-	if len(t.sinData) > 72 {
-		t.sinData = t.sinData[2:]
-	} else {
-		t.sinData = append(t.sinData, t.sinData[len(t.sinData)-1])
+	/*
+		To resize properly the linechart plot with need to get the max x value if we suppose that
+		1 unit = 1 pixel
+
+	*/
+	d.p.Data[0] = t.sinData[1:]
+	//point := d.p.Size()
+	/**
+		get max x value of linechart plot minus 7 (don't know why but it's better)
+	**/
+	//size := point.X - 7 //int(float64(float64(termWidth)*0.4495) - 3)
+	termWidth, _ := ui.TerminalDimensions()
+	size := (termWidth / 2) - 5
+
+	log.Println("before", "size", size, "len sinddata", len(t.sinData))
+	/**
+	        in initialization, it happens that the size equal 0
+	**/
+	if size > 0 {
+		/**
+			in case of size it's bigger than previously
+			need to complete the slice from the beginning.
+			To do so, init new array with the difference from now and previously slice len
+		**/
+		if size > len(t.sinData) {
+			lineLength := size - len(t.sinData)
+			t.sinData = make([]float64, lineLength)
+			for i := 0; i < lineLength; i++ {
+				t.sinData[i] = d.p.Data[0][0]
+			}
+			t.sinData = append(t.sinData, d.p.Data[0]...)
+		} else {
+			t.sinData = t.sinData[len(t.sinData)-size:]
+		}
+
 	}
+
+	t.sinData = append(t.sinData, t.sinData[len(t.sinData)-1])
+	log.Println("after", "size", size, "len sinddata", len(t.sinData))
+
 }
 
 // every 10 seconds draw the dashboard
@@ -174,7 +216,7 @@ func drawDashboard(t *Term, d *dashboard) {
 	drawAlert(t, d)
 
 	t.sinData = append(t.sinData, float64(t.sum))
-
+	termWidth, termHeight := ui.TerminalDimensions()
 	drawLine(d, t)
 	d.b.Data = t.barchartData
 	d.b.Labels = t.bcLabels
@@ -186,7 +228,7 @@ func drawDashboard(t *Term, d *dashboard) {
 		if t.logConf.recapUsage[v] != 0 {
 			currentValue = strconv.Itoa(t.logConf.recapUsage[v])
 			// display value only once
-			t.logConf.recapUsage[v] = 0
+			// t.logConf.recapUsage[v] = 0
 		} else {
 			currentValue = strconv.Itoa(tplHTTPUsade[v])
 		}
@@ -200,9 +242,46 @@ func drawDashboard(t *Term, d *dashboard) {
 
 	t.logConf.totalDataHandle += t.logConf.dataHandle
 
-	d.pa.Text = fmt.Sprint(httpCodeDetails, "Total Requests RX: ", t.logConf.totalDataHandle, " B", "              Rx/s: ", t.logConf.dataHandle)
+	grid = ui.NewGrid()
 
-	ui.Render(d.p, d.l, d.b, d.pa)
+	grid.SetRect(0, 0, termWidth, termHeight)
+	// try to create a table without cell separator
+	table1 := termui.NewTable()
+	table1.CellSeparator = false
+	table1.TextAlignment = ui.AlignCenter
+
+	table1.Rows = [][]string{
+		[]string{
+			"5xx: ", strconv.Itoa(t.logConf.recapUsage["5xx"]),
+			"4xx :", strconv.Itoa(t.logConf.recapUsage["4xx"]),
+			"3xx: ", strconv.Itoa(t.logConf.recapUsage["3xx"]),
+			"2xx: ", strconv.Itoa(t.logConf.recapUsage["2xx"]),
+			"1xx: ", strconv.Itoa(t.logConf.recapUsage["1xx"]),
+		},
+		[]string{},
+		[]string{
+			"Total Requests RX", fmt.Sprintf("%f", t.logConf.totalDataHandle) + " B",
+			"Rx/s", fmt.Sprintf("%f", t.logConf.dataHandle),
+		},
+	}
+	table1.RowSeparator = false
+	table1.TextStyle = ui.NewStyle(ui.ColorWhite)
+
+	grid.Set(
+		ui.NewRow(1.0,
+			ui.NewCol(1.0/2,
+				ui.NewRow(1.0/3, table1),
+				ui.NewRow(1.0/3, d.b),
+				ui.NewRow(1.0/3, d.p),
+			),
+			ui.NewCol(1.0/2,
+				ui.NewRow(1.0/2, d.l),
+				ui.NewRow(1.0/2, d.p2),
+			),
+		),
+	)
+
+	ui.Render(grid)
 
 	t.logConf.dataHandle = 0
 
@@ -210,6 +289,12 @@ func drawDashboard(t *Term, d *dashboard) {
 
 // Run dashboard
 func (t *Term) Run() error {
+	file, err := setupLogfile()
+	if err != nil {
+		log.Fatalf("failed to setup log file: %v", err)
+	}
+	defer file.Close()
+
 	if err := ui.Init(); err != nil {
 		log.Fatalf("failed to initialize termui: %v", err)
 	}
@@ -243,6 +328,14 @@ func (t *Term) Run() error {
 			return err
 		case e := <-uiEvents:
 			switch e.ID {
+			case "<Resize>":
+				payload := e.Payload.(ui.Resize)
+				grid.SetRect(0, 0, payload.Width, payload.Height)
+				ui.Clear()
+				ui.Render(grid)
+				// need to call twice drawDashboard
+				drawDashboard(t, dashboard)
+				//drawDashboard(t, dashboard)
 			case "q", "<C-c>":
 				return nil
 			}

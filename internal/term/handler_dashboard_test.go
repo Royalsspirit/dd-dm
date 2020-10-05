@@ -17,30 +17,19 @@ func TestAlert(t *testing.T) {
 	d := dashboard{
 		pa: widgets.NewParagraph(),
 	}
-	max := 11
-	drawAlert(&te, &d, &max)
+	drawAlert(&te, &d)
 	assert.Contains(t, d.pa.Text, "alert", "should contain alert")
 }
 
 // TestBartChart test a barchart percentage
 func TestBartChart(t *testing.T) {
 	te := Term{
-		queue: []line{{
-			section: "/toto",
-			date:    time.Now().String(),
-		},
-		},
 		statistics: map[string]int{"/toto": 0, "/tata": 0},
 		sum:        1,
 	}
 
 	drawBarchart(&te)
 	assert.Equal(t, te.barchartData[0], float64(100), "should equal to 100")
-	te.queue = []line{{
-		section: "/tata",
-		date:    time.Now().String(),
-	},
-	}
 	te.sum = 2
 	drawBarchart(&te)
 
