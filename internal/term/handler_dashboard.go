@@ -8,6 +8,7 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/Royalsspirit/dd-dm/internal/termui"
 	ui "github.com/gizak/termui/v3"
 	"github.com/gizak/termui/v3/widgets"
 )
@@ -227,7 +228,7 @@ func drawDashboard(t *Term, d *dashboard) {
 		if t.logConf.recapUsage[v] != 0 {
 			currentValue = strconv.Itoa(t.logConf.recapUsage[v])
 			// display value only once
-			t.logConf.recapUsage[v] = 0
+			// t.logConf.recapUsage[v] = 0
 		} else {
 			currentValue = strconv.Itoa(tplHTTPUsade[v])
 		}
@@ -241,16 +242,27 @@ func drawDashboard(t *Term, d *dashboard) {
 
 	t.logConf.totalDataHandle += t.logConf.dataHandle
 
-	d.pa.Text = fmt.Sprint(httpCodeDetails, "Total Requests RX: ", t.logConf.totalDataHandle, " B", "              Rx/s: ", t.logConf.dataHandle)
-
 	grid = ui.NewGrid()
 
 	grid.SetRect(0, 0, termWidth, termHeight)
 	// try to create a table without cell separator
-	table1 := widgets.NewTable()
+	table1 := termui.NewTable()
+	table1.CellSeparator = false
 	table1.TextAlignment = ui.AlignCenter
+
 	table1.Rows = [][]string{
-		[]string{"5xx: ", "12", "4xx :", "11", "3xx: ", "43", "2xx: ", "9", "1xx: ", "98"},
+		[]string{
+			"5xx: ", strconv.Itoa(t.logConf.recapUsage["5xx"]),
+			"4xx :", strconv.Itoa(t.logConf.recapUsage["4xx"]),
+			"3xx: ", strconv.Itoa(t.logConf.recapUsage["3xx"]),
+			"2xx: ", strconv.Itoa(t.logConf.recapUsage["2xx"]),
+			"1xx: ", strconv.Itoa(t.logConf.recapUsage["1xx"]),
+		},
+		[]string{},
+		[]string{
+			"Total Requests RX", fmt.Sprintf("%f", t.logConf.totalDataHandle) + " B",
+			"Rx/s", fmt.Sprintf("%f", t.logConf.dataHandle),
+		},
 	}
 	table1.RowSeparator = false
 	table1.TextStyle = ui.NewStyle(ui.ColorWhite)
